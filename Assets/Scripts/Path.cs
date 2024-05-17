@@ -21,9 +21,10 @@ public class Path : MonoBehaviour
     [SerializeField] private GameObject[] pathPoints;
     [SerializeField] private float[] timings;
     [SerializeField] private float speed;
+    [SerializeField] private float[] detailsPosX;
 
     private Vector3 actualPos;
-    private int x;
+    private int stage;
 
     private int detailsAmount = 0;
 
@@ -40,51 +41,69 @@ public class Path : MonoBehaviour
         {2, "Получение заготовок" },
         {3, "Ожидание деталей" },
         {4, "Получение деталей" },
-        {5, "Доставка деталей" },
-        {6, "Возвращение" }
+        {5, "Доставка деталей" }
     };
-    // -242 293 921
+
     private void Start()
     {
-        x = 0;
+        stage = 0;
 
-        stageText.text = stagesDict[x];
+        stageText.text = stagesDict[stage];
 
-        startBut.onClick.AddListener(delegate { 
-            if(x == 0)
-                StartCoroutine(NextPhase(timings[x])); 
-        });
+        startBut.onClick.AddListener(StartCycle);
     }
 
-    public IEnumerator NextPhase(float time)
+    public void StartCycle()
+    {
+        if (stage == 0 && detailsAmount < 10)
+            StartCoroutine(NextPhase(timings[stage]));
+    }
+
+    IEnumerator NextPhase(float time)
     {
         yield return new WaitForSeconds(time);
 
-        x++;
+        stage++;
         readyForNextPhase = true;
 
-        stageText.text = stagesDict[x];
 
-        if (x == pathPoints.Length - 1)
+
+        if (stage == pathPoints.Length - 1)
         {
             objForDelivery.transform.SetParent(deskDetails.transform);
-            objForDelivery.transform.localPosition = new Vector3(1.145f, 0.481f, 0.229f);
+
+            detailsAmount++;
+
+            if ((detailsAmount) % 2 == 0)
+            {
+                objForDelivery.transform.localPosition = new Vector3(detailsPosX[detailsAmount], 0.481f, -0.192f);
+            }
+            else
+            {
+                objForDelivery.transform.localPosition = new Vector3(detailsPosX[detailsAmount], 0.481f, 0.229f);
+            }
+
+
             readyForNextPhase = false;
 
             objForDelivery = null;
-            x = 0;
-            stageText.text = stagesDict[x];
+            stage = 0;
+            stageText.text = stagesDict[stage];
 
-            detailsAmount++;
+
+        }
+        else
+        {
+            stageText.text = stagesDict[stage];
         }
 
-        if(x == 1)
+        if(stage == 1)
         {
             objForDelivery = deskWorkpieces.transform.GetChild(0).gameObject;
             objForDelivery.transform.SetParent(delivery.transform);
             objForDelivery.transform.localPosition = new Vector3(-242, 293, 921);
         } 
-        if(x == 2)
+        if(stage == 2)
         {
             // Wait for robot arriving
             yield return new WaitForSeconds(1.5f);
@@ -98,7 +117,7 @@ public class Path : MonoBehaviour
             objForDelivery.transform.localPosition = new Vector3(0.626f, 0.481f, -0.06f);
             objForDelivery.transform.localEulerAngles = new Vector3(0, 90, 0);
         }
-        if(x == 3)
+        if(stage == 3)
         {
             objForDelivery.transform.SetParent(manipulator.transform);
             objForDelivery.transform.localPosition = new Vector3(-1045.7f, 990.8f, 252.5f);
@@ -126,7 +145,7 @@ public class Path : MonoBehaviour
             objForDelivery.transform.localPosition = new Vector3(0.626f, 0.481f, -0.06f);
             objForDelivery.transform.localEulerAngles = new Vector3(0, 90, 0);
         }
-        if(x == 4)
+        if(stage == 4)
         {
             // Wait for robot arriving
             yield return new WaitForSeconds(1.5f);
@@ -138,7 +157,7 @@ public class Path : MonoBehaviour
             objForDelivery.transform.SetParent(delivery.transform);
             objForDelivery.transform.localPosition = new Vector3(-242, 293, 921);
         }
-        if(x == 5)
+        if(stage == 5)
         {
             objForDelivery.transform.SetParent(delivery.transform);
             objForDelivery.transform.localPosition = new Vector3(-242, 293, 921);
@@ -149,14 +168,14 @@ public class Path : MonoBehaviour
     {
         actualPos = delivery.transform.position;
         delivery.transform.position = Vector3.MoveTowards(actualPos, 
-            new Vector3(pathPoints[x].transform.position.x, 0.09f, pathPoints[x].transform.position.z),
+            new Vector3(pathPoints[stage].transform.position.x, 0.09f, pathPoints[stage].transform.position.z),
             speed * Time.deltaTime);
 
-        if(actualPos == new Vector3(pathPoints[x].transform.position.x, 0.09f, pathPoints[x].transform.position.z)
-            && x != pathPoints.Length - 1 && readyForNextPhase)
+        if(actualPos == new Vector3(pathPoints[stage].transform.position.x, 0.09f, pathPoints[stage].transform.position.z)
+            && stage != pathPoints.Length - 1 && readyForNextPhase)
         {
             readyForNextPhase = false;
-            StartCoroutine(NextPhase(timings[x]));
+            StartCoroutine(NextPhase(timings[stage]));
         }
     }
 }
